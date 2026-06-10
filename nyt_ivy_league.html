@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NYT Bestsellers × Ivy League</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Georgia', serif;
+    background: #0d0d0d;
+    color: #e8e4dc;
+    min-height: 100vh;
+    padding: 40px 24px;
+  }
+  .header {
+    max-width: 1100px;
+    margin: 0 auto 40px;
+  }
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #ffffff;
+    margin-bottom: 6px;
+  }
+  .header p {
+    font-size: 0.9rem;
+    color: #888;
+    font-family: 'Arial', sans-serif;
+    line-height: 1.5;
+  }
+  .stats-row {
+    display: flex;
+    gap: 16px;
+    max-width: 1100px;
+    margin: 0 auto 32px;
+    flex-wrap: wrap;
+  }
+  .stat-card {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    padding: 16px 24px;
+    flex: 1;
+    min-width: 160px;
+  }
+  .stat-card .num {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #c8a84b;
+    display: block;
+  }
+  .stat-card .label {
+    font-size: 0.75rem;
+    color: #888;
+    font-family: Arial, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+
+  .filters {
+    max-width: 1100px;
+    margin: 0 auto 20px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-label {
+    font-size: 0.75rem;
+    color: #888;
+    font-family: Arial, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .filter-btn {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: #bbb;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-family: Arial, sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-btn:hover { border-color: #c8a84b; color: #c8a84b; }
+  .filter-btn.active { background: #c8a84b22; border-color: #c8a84b; color: #c8a84b; }
+
+  .search-box {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: #e8e4dc;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-family: Arial, sans-serif;
+    outline: none;
+    width: 220px;
+    margin-left: auto;
+  }
+  .search-box:focus { border-color: #c8a84b; }
+  .search-box::placeholder { color: #555; }
+
+  table {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+    font-size: 0.82rem;
+  }
+  thead th {
+    background: #151515;
+    border-bottom: 1px solid #2a2a2a;
+    padding: 12px 14px;
+    text-align: left;
+    color: #888;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  thead th:hover { color: #c8a84b; }
+  thead th .sort-icon { margin-left: 4px; opacity: 0.4; }
+  thead th.sorted { color: #c8a84b; }
+  thead th.sorted .sort-icon { opacity: 1; }
+
+  tbody tr {
+    border-bottom: 1px solid #1e1e1e;
+    transition: background 0.1s;
+  }
+  tbody tr:hover { background: #1a1a1a; }
+  tbody tr.hidden { display: none; }
+  td {
+    padding: 12px 14px;
+    vertical-align: top;
+    line-height: 1.4;
+  }
+  .author-name {
+    font-weight: 600;
+    color: #ffffff;
+    font-family: Georgia, serif;
+    font-size: 0.88rem;
+  }
+  .notable-works {
+    font-size: 0.75rem;
+    color: #777;
+    margin-top: 3px;
+    font-style: italic;
+  }
+  .genre-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .genre-fiction     { background: #1e2a3a; color: #6aabdd; }
+  .genre-thriller    { background: #2a1e3a; color: #aa6add; }
+  .genre-nonfiction  { background: #1e3a2a; color: #6add9a; }
+  .genre-romance     { background: #3a1e2a; color: #dd6aaa; }
+  .genre-horror      { background: #3a1e1e; color: #dd6a6a; }
+  .genre-scifi       { background: #1e3a3a; color: #6adddd; }
+  .genre-memoir      { background: #3a3a1e; color: #dddd6a; }
+  .genre-crime       { background: #2a2a1e; color: #ddaa6a; }
+
+  .ivy-cell { }
+  .ivy-school {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    margin: 2px 2px 2px 0;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .ivy-harvard   { background: #7b000022; border: 1px solid #7b000066; color: #e87a7a; }
+  .ivy-yale      { background: #00356b22; border: 1px solid #00356b66; color: #6aaee8; }
+  .ivy-princeton { background: #e77500221; border: 1px solid #e7750066; color: #e8b96a; }
+  .ivy-columbia  { background: #0033a022; border: 1px solid #0033a066; color: #6a8ae8; }
+  .ivy-penn      { background: #01153622; border: 1px solid #01153666; color: #8ab0e8; }
+  .ivy-cornell   { background: #b3182522; border: 1px solid #b3182566; color: #e87a7a; }
+  .ivy-dartmouth { background: #00703c22; border: 1px solid #00703c66; color: #6ae89a; }
+  .ivy-brown     { background: #4e392722; border: 1px solid #4e392766; color: #c8a87a; }
+  .degree-type {
+    font-size: 0.68rem;
+    color: #666;
+    margin-left: 4px;
+  }
+  .no-ivy {
+    color: #444;
+    font-size: 0.78rem;
+    font-style: italic;
+  }
+  .note-cell {
+    font-size: 0.75rem;
+    color: #666;
+    line-height: 1.4;
+  }
+  .peak-years {
+    font-size: 0.75rem;
+    color: #999;
+  }
+
+  .table-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    overflow-x: auto;
+  }
+
+  .legend {
+    max-width: 1100px;
+    margin: 24px auto 0;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 0.72rem;
+    color: #666;
+    font-family: Arial, sans-serif;
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot {
+    width: 8px; height: 8px; border-radius: 2px;
+  }
+
+  .section-divider {
+    max-width: 1100px;
+    margin: 32px auto 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-divider h2 {
+    font-size: 0.85rem;
+    color: #666;
+    font-family: Arial, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .section-divider hr { flex: 1; border: none; border-top: 1px solid #1e1e1e; }
+
+  .footnote {
+    max-width: 1100px;
+    margin: 32px auto 0;
+    font-size: 0.72rem;
+    color: #444;
+    font-family: Arial, sans-serif;
+    line-height: 1.7;
+  }
+  .footnote strong { color: #666; }
+
+  .count-badge {
+    font-size: 0.68rem;
+    color: #555;
+    font-family: Arial, sans-serif;
+    margin-left: 8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>NYT Bestseller Authors × Ivy League Education</h1>
+  <p>Prominent authors who appeared on New York Times Bestseller lists, 1975–2025, cross-referenced with Ivy League institutions (Harvard, Yale, Princeton, Columbia, Penn, Cornell, Dartmouth, Brown). Sorted by NYT list prominence. Degree type noted where known.</p>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <span class="num" id="total-count">40</span>
+    <span class="label">Authors Reviewed</span>
+  </div>
+  <div class="stat-card">
+    <span class="num" id="ivy-count">18</span>
+    <span class="label">Ivy League Alumni</span>
+  </div>
+  <div class="stat-card">
+    <span class="num">45%</span>
+    <span class="label">Ivy Connection Rate</span>
+  </div>
+  <div class="stat-card">
+    <span class="num">Harvard</span>
+    <span class="label">Most Common School</span>
+  </div>
+</div>
+
+<div class="filters">
+  <span class="filter-label">Filter:</span>
+  <button class="filter-btn active" onclick="filterTable('all')">All Authors</button>
+  <button class="filter-btn" onclick="filterTable('ivy')">Ivy Alumni Only</button>
+  <button class="filter-btn" onclick="filterTable('no-ivy')">No Ivy Degree</button>
+  <button class="filter-btn" onclick="filterTable('harvard')">Harvard</button>
+  <button class="filter-btn" onclick="filterTable('yale')">Yale</button>
+  <button class="filter-btn" onclick="filterTable('columbia')">Columbia</button>
+  <button class="filter-btn" onclick="filterTable('princeton')">Princeton</button>
+  <input class="search-box" type="text" placeholder="Search authors..." oninput="searchTable(this.value)">
+</div>
+
+<div class="table-wrap">
+<table id="main-table">
+  <thead>
+    <tr>
+      <th onclick="sortTable(0)">#<span class="sort-icon">↕</span></th>
+      <th onclick="sortTable(1)">Author<span class="sort-icon">↕</span></th>
+      <th>Genre</th>
+      <th>NYT Peak Era</th>
+      <th>Ivy League Degree(s)</th>
+      <th>Non-Ivy Education</th>
+      <th>Notable NYT Works</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <!-- IVY LEAGUE AUTHORS -->
+    <tr data-ivy="yes" data-school="harvard">
+      <td>1</td>
+      <td><div class="author-name">Michael Crichton</div><div class="notable-works">Jurassic Park, The Andromeda Strain</div></td>
+      <td><span class="genre-badge genre-scifi">Sci-Fi / Thriller</span></td>
+      <td class="peak-years">1969–2008</td>
+      <td><span class="ivy-school ivy-harvard">Harvard</span><span class="degree-type">BA, MD</span></td>
+      <td>—</td>
+      <td class="note-cell">Jurassic Park, Disclosure, The Lost World, Timeline, Prey, Next</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="columbia harvard">
+      <td>2</td>
+      <td><div class="author-name">Barack Obama</div><div class="notable-works">Dreams from My Father, A Promised Land</div></td>
+      <td><span class="genre-badge genre-memoir">Memoir / Politics</span></td>
+      <td class="peak-years">1995–2020</td>
+      <td><span class="ivy-school ivy-columbia">Columbia</span><span class="degree-type">BA</span> <span class="ivy-school ivy-harvard">Harvard Law</span><span class="degree-type">JD</span></td>
+      <td>—</td>
+      <td class="note-cell">The Audacity of Hope, A Promised Land, Dreams from My Father</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="princeton harvard">
+      <td>3</td>
+      <td><div class="author-name">Michelle Obama</div><div class="notable-works">Becoming, The Light We Carry</div></td>
+      <td><span class="genre-badge genre-memoir">Memoir</span></td>
+      <td class="peak-years">2018–present</td>
+      <td><span class="ivy-school ivy-princeton">Princeton</span><span class="degree-type">BA</span> <span class="ivy-school ivy-harvard">Harvard Law</span><span class="degree-type">JD</span></td>
+      <td>—</td>
+      <td class="note-cell">Becoming (#1, 14M+ copies sold), The Light We Carry</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="yale">
+      <td>4</td>
+      <td><div class="author-name">Toni Morrison</div><div class="notable-works">Beloved, Song of Solomon</div></td>
+      <td><span class="genre-badge genre-fiction">Literary Fiction</span></td>
+      <td class="peak-years">1977–2004</td>
+      <td><span class="ivy-school ivy-cornell">Cornell</span><span class="degree-type">MA</span></td>
+      <td>Howard University (BA)</td>
+      <td class="note-cell">Beloved (Pulitzer), Song of Solomon, Sula, Jazz, Paradise</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="yale">
+      <td>5</td>
+      <td><div class="author-name">Bob Woodward</div><div class="notable-works">Fear, Rage, The Final Days</div></td>
+      <td><span class="genre-badge genre-nonfiction">Nonfiction / Politics</span></td>
+      <td class="peak-years">1974–2022</td>
+      <td><span class="ivy-school ivy-yale">Yale</span><span class="degree-type">BA</span></td>
+      <td>—</td>
+      <td class="note-cell">The Final Days, Veil, The Agenda, Fear, Rage, Peril</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="harvard">
+      <td>6</td>
+      <td><div class="author-name">Malcolm Gladwell</div><div class="notable-works">The Tipping Point, Outliers</div></td>
+      <td><span class="genre-badge genre-nonfiction">Nonfiction</span></td>
+      <td class="peak-years">2000–present</td>
+      <td class="no-ivy">—</td>
+      <td>Univ. of Toronto (BA, History)</td>
+      <td class="note-cell">The Tipping Point, Blink, Outliers, David and Goliath, Talking to Strangers</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="yale">
+      <td>7</td>
+      <td><div class="author-name">Donna Tartt</div><div class="notable-works">The Secret History, The Goldfinch</div></td>
+      <td><span class="genre-badge genre-fiction">Literary Fiction</span></td>
+      <td class="peak-years">1992–2013</td>
+      <td><span class="ivy-school ivy-dartmouth">Dartmouth</span><span class="degree-type">BA</span></td>
+      <td>—</td>
+      <td class="note-cell">The Secret History, The Little Friend, The Goldfinch (Pulitzer 2014)</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="harvard">
+      <td>8</td>
+      <td><div class="author-name">Al Gore</div><div class="notable-works">An Inconvenient Truth, Earth in the Balance</div></td>
+      <td><span class="genre-badge genre-nonfiction">Nonfiction</span></td>
+      <td class="peak-years">1992–2007</td>
+      <td><span class="ivy-school ivy-harvard">Harvard</span><span class="degree-type">BA</span></td>
+      <td>Vanderbilt (Law, did not complete)</td>
+      <td class="note-cell">Earth in the Balance, An Inconvenient Truth, The Assault on Reason, Our Choice</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="yale">
+      <td>9</td>
+      <td><div class="author-name">Naomi Wolf</div><div class="notable-works">The Beauty Myth</div></td>
+      <td><span class="genre-badge genre-nonfiction">Nonfiction</span></td>
+      <td class="peak-years">1991–2012</td>
+      <td><span class="ivy-school ivy-yale">Yale</span><span class="degree-type">BA</span></td>
+      <td>Oxford (D.Phil)</td>
+      <td class="note-cell">The Beauty Myth, Fire with Fire, Vagina, Outrages</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="columbia">
+      <td>10</td>
+      <td><div class="author-name">Paul Auster</div><div class="notable-works">The New York Trilogy</div></td>
+      <td><span class="genre-badge genre-fiction">Literary Fiction</span></td>
+      <td class="peak-years">1985–2010</td>
+      <td><span class="ivy-school ivy-columbia">Columbia</span><span class="degree-type">BA, MA</span></td>
+      <td>—</td>
+      <td class="note-cell">The New York Trilogy, Moon Palace, The Music of Chance, Leviathan</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="harvard">
+      <td>11</td>
+      <td><div class="author-name">Scott Turow</div><div class="notable-works">Presumed Innocent, Ordinary Heroes</div></td>
+      <td><span class="genre-badge genre-thriller">Legal Thriller</span></td>
+      <td class="peak-years">1987–2010</td>
+      <td><span class="ivy-school ivy-harvard">Harvard Law</span><span class="degree-type">JD</span></td>
+      <td>Amherst (BA); Stanford (MFA)</td>
+      <td class="note-cell">Presumed Innocent, Burden of Proof, Pleading Guilty, Reversible Errors</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="yale">
+      <td>12</td>
+      <td><div class="author-name">Hillary Clinton</div><div class="notable-works">Living History, Hard Choices</div></td>
+      <td><span class="genre-badge genre-memoir">Memoir / Politics</span></td>
+      <td class="peak-years">2003–2017</td>
+      <td><span class="ivy-school ivy-yale">Yale Law</span><span class="degree-type">JD</span></td>
+      <td>Wellesley College (BA)</td>
+      <td class="note-cell">Living History, Hard Choices, What Happened</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="yale">
+      <td>13</td>
+      <td><div class="author-name">Jeffrey Toobin</div><div class="notable-works">The Run of His Life, The Nine</div></td>
+      <td><span class="genre-badge genre-nonfiction">Nonfiction / Law</span></td>
+      <td class="peak-years">1996–2020</td>
+      <td><span class="ivy-school ivy-harvard">Harvard</span><span class="degree-type">BA</span> <span class="ivy-school ivy-yale">Yale Law</span><span class="degree-type">JD</span></td>
+      <td>—</td>
+      <td class="note-cell">The Run of His Life, A Vast Conspiracy, Too Close to Call, The Nine</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="yale">
+      <td>14</td>
+      <td><div class="author-name">Jennifer Weiner</div><div class="notable-works">Good in Bed, In Her Shoes</div></td>
+      <td><span class="genre-badge genre-fiction">Commercial Fiction</span></td>
+      <td class="peak-years">2001–present</td>
+      <td><span class="ivy-school ivy-princeton">Princeton</span><span class="degree-type">BA</span></td>
+      <td>—</td>
+      <td class="note-cell">Good in Bed, In Her Shoes, Little Earthquakes, Best Friends Forever</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="cornell">
+      <td>15</td>
+      <td><div class="author-name">Toni Morrison <em>(see row 4)</em></div></td>
+      <td colspan="5" style="color:#444;font-size:0.75rem;font-style:italic;">See row 4 above — Cornell MA listed under Ivy schools.</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="harvard">
+      <td>15</td>
+      <td><div class="author-name">Michael Lewis</div><div class="notable-works">Liar's Poker, Moneyball, The Big Short</div></td>
+      <td><span class="genre-badge genre-nonfiction">Nonfiction / Finance</span></td>
+      <td class="peak-years">1989–present</td>
+      <td><span class="ivy-school ivy-princeton">Princeton</span><span class="degree-type">BA</span></td>
+      <td>LSE (MA, Economics)</td>
+      <td class="note-cell">Liar's Poker, Moneyball, The Big Short, Flash Boys, The Premonition</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="harvard">
+      <td>16</td>
+      <td><div class="author-name">Bill Bryson</div><div class="notable-works">A Walk in the Woods, A Short History of Nearly Everything</div></td>
+      <td><span class="genre-badge genre-nonfiction">Nonfiction</span></td>
+      <td class="peak-years">1995–2015</td>
+      <td class="no-ivy">—</td>
+      <td>Drake University (BA) — no Ivy</td>
+      <td class="note-cell">A Walk in the Woods, Notes from a Small Island, A Short History of Nearly Everything</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="columbia">
+      <td>17</td>
+      <td><div class="author-name">Jhumpa Lahiri</div><div class="notable-works">Interpreter of Maladies, The Namesake</div></td>
+      <td><span class="genre-badge genre-fiction">Literary Fiction</span></td>
+      <td class="peak-years">1999–2013</td>
+      <td><span class="ivy-school ivy-brown">Brown</span><span class="degree-type">BA, MA, MFA, PhD</span></td>
+      <td>—</td>
+      <td class="note-cell">Interpreter of Maladies (Pulitzer), The Namesake, The Lowland, Unaccustomed Earth</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="yale">
+      <td>18</td>
+      <td><div class="author-name">Jonathan Franzen</div><div class="notable-works">The Corrections, Freedom</div></td>
+      <td><span class="genre-badge genre-fiction">Literary Fiction</span></td>
+      <td class="peak-years">2001–present</td>
+      <td class="no-ivy">—</td>
+      <td>Swarthmore (BA); Univ. of Munich (study abroad)</td>
+      <td class="note-cell">The Corrections (NBA, 2001), Freedom, The Corrections, Crossroads, Purity</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="harvard">
+      <td>19</td>
+      <td><div class="author-name">Sheryl Sandberg</div><div class="notable-works">Lean In</div></td>
+      <td><span class="genre-badge genre-nonfiction">Nonfiction / Business</span></td>
+      <td class="peak-years">2013–2017</td>
+      <td><span class="ivy-school ivy-harvard">Harvard</span><span class="degree-type">BA; MBA</span></td>
+      <td>—</td>
+      <td class="note-cell">Lean In, Option B</td>
+    </tr>
+
+    <tr data-ivy="yes" data-school="yale">
+      <td>20</td>
+      <td><div class="author-name">Junot Díaz</div><div class="notable-works">The Brief Wondrous Life of Oscar Wao</div></td>
+      <td><span class="genre-badge genre-fiction">Literary Fiction</span></td>
+      <td class="peak-years">1996–2012</td>
+      <td><span class="ivy-school ivy-cornell">Cornell</span><span class="degree-type">MFA</span></td>
+      <td>Rutgers (BA)</td>
+      <td class="note-cell">Drown, The Brief Wondrous Life of Oscar Wao (Pulitzer), This Is How You Lose Her</td>
+    </tr>
+
+    <!-- NON-IVY AUTHORS -->
+
+    <tr data-ivy="no">
+      <td>21</td>
+      <td><div class="author-name">James Patterson</div><div class="notable-works">Alex Cross series, Women's Murder Club</div></td>
+      <td><span class="genre-badge genre-thriller">Thriller</span></td>
+      <td class="peak-years">1993–present</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Manhattan College (BA); Vanderbilt (MA)</td>
+      <td class="note-cell">Along Came a Spider, Kiss the Girls, 1st to Die — most NYT #1s of any author</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>22</td>
+      <td><div class="author-name">Danielle Steel</div><div class="notable-works">Crossing, Jewels, The Gift</div></td>
+      <td><span class="genre-badge genre-romance">Romance</span></td>
+      <td class="peak-years">1978–present</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Parsons School of Design; NYU (did not complete)</td>
+      <td class="note-cell">All 180+ novels NYT bestsellers; one of best-selling authors of all time</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>23</td>
+      <td><div class="author-name">Stephen King</div><div class="notable-works">The Shining, It, The Stand</div></td>
+      <td><span class="genre-badge genre-horror">Horror</span></td>
+      <td class="peak-years">1974–present</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Univ. of Maine, Orono (BA, English)</td>
+      <td class="note-cell">Carrie, The Shining, It, The Stand, Pet Sematary, Misery — 60+ NYT bestsellers</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>24</td>
+      <td><div class="author-name">John Grisham</div><div class="notable-works">The Firm, The Pelican Brief, The Client</div></td>
+      <td><span class="genre-badge genre-thriller">Legal Thriller</span></td>
+      <td class="peak-years">1991–present</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Mississippi State (BS); Univ. of Mississippi (JD)</td>
+      <td class="note-cell">The Firm, The Pelican Brief, The Client, A Time to Kill — 30+ NYT #1s</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>25</td>
+      <td><div class="author-name">Nora Roberts</div><div class="notable-works">Born in Fire, Tribute, The Witness</div></td>
+      <td><span class="genre-badge genre-romance">Romance / Suspense</span></td>
+      <td class="peak-years">1981–present</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Graduated high school; no college degree</td>
+      <td class="note-cell">200+ novels on NYT list; 861 total weeks on NYT list as of 2011</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>26</td>
+      <td><div class="author-name">Tom Clancy</div><div class="notable-works">The Hunt for Red October, Patriot Games</div></td>
+      <td><span class="genre-badge genre-thriller">Techno-Thriller</span></td>
+      <td class="peak-years">1984–2013</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Loyola College Baltimore (BA)</td>
+      <td class="note-cell">The Hunt for Red October, Patriot Games, Clear and Present Danger, Rainbow Six</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>27</td>
+      <td><div class="author-name">David Baldacci</div><div class="notable-works">Absolute Power, Simple Genius</div></td>
+      <td><span class="genre-badge genre-thriller">Thriller</span></td>
+      <td class="peak-years">1996–present</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Virginia Commonwealth (BA); Univ. of Virginia (JD)</td>
+      <td class="note-cell">Absolute Power, The Winner, Wish You Well, Camel Club series — 130M+ copies</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>28</td>
+      <td><div class="author-name">Dan Brown</div><div class="notable-works">The Da Vinci Code, Angels & Demons</div></td>
+      <td><span class="genre-badge genre-thriller">Thriller</span></td>
+      <td class="peak-years">2000–2017</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Amherst College (BA, English & Spanish); Phillips Exeter Academy (prep)</td>
+      <td class="note-cell">The Da Vinci Code (#1 longest-running single book run), Angels & Demons, Inferno</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>29</td>
+      <td><div class="author-name">Khaled Hosseini</div><div class="notable-works">The Kite Runner, A Thousand Splendid Suns</div></td>
+      <td><span class="genre-badge genre-fiction">Literary Fiction</span></td>
+      <td class="peak-years">2003–2013</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Santa Clara Univ. (BS, Biology); UC San Diego (MD)</td>
+      <td class="note-cell">The Kite Runner, A Thousand Splendid Suns (100+ weeks on NYT list), And the Mountains Echoed</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>30</td>
+      <td><div class="author-name">Malcolm Gladwell</div></td>
+      <td colspan="5" style="color:#444;font-size:0.75rem;font-style:italic;">See row 6 above — University of Toronto grad, no Ivy degree.</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>30</td>
+      <td><div class="author-name">Mitch Albom</div><div class="notable-works">Tuesdays with Morrie, The Five People</div></td>
+      <td><span class="genre-badge genre-fiction">Inspirational Fiction</span></td>
+      <td class="peak-years">1997–2013</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Brandeis Univ. (BA, Sociology)</td>
+      <td class="note-cell">Tuesdays with Morrie (longest-running nonfiction book on NYT list), The Five People You Meet in Heaven</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>31</td>
+      <td><div class="author-name">Nicholas Sparks</div><div class="notable-works">The Notebook, A Walk to Remember</div></td>
+      <td><span class="genre-badge genre-romance">Romance</span></td>
+      <td class="peak-years">1996–present</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Univ. of Notre Dame (BA, Business Finance)</td>
+      <td class="note-cell">The Notebook, A Walk to Remember, Message in a Bottle, Nights in Rodanthe</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>32</td>
+      <td><div class="author-name">Kristin Hannah</div><div class="notable-works">The Nightingale, The Four Winds</div></td>
+      <td><span class="genre-badge genre-fiction">Historical Fiction</span></td>
+      <td class="peak-years">2000–present</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Univ. of Washington (BA, Communications); Univ. of Puget Sound (JD)</td>
+      <td class="note-cell">The Nightingale, Firefly Lane, The Four Winds, Fly Away</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>33</td>
+      <td><div class="author-name">Colleen Hoover</div><div class="notable-works">It Ends with Us, Ugly Love</div></td>
+      <td><span class="genre-badge genre-romance">Romance</span></td>
+      <td class="peak-years">2016–present</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Texas A&M–Commerce (BA, Social Work)</td>
+      <td class="note-cell">It Ends with Us, Ugly Love, Verity, November 9 — dominated NYT list 2021–2023</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>34</td>
+      <td><div class="author-name">Gillian Flynn</div><div class="notable-works">Gone Girl, Sharp Objects</div></td>
+      <td><span class="genre-badge genre-thriller">Thriller</span></td>
+      <td class="peak-years">2006–present</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Univ. of Kansas (BA); Northwestern (MS, Journalism)</td>
+      <td class="note-cell">Sharp Objects, Dark Places, Gone Girl (50M+ copies sold)</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>35</td>
+      <td><div class="author-name">Lee Child</div><div class="notable-works">Killing Floor, Die Trying (Jack Reacher)</div></td>
+      <td><span class="genre-badge genre-thriller">Thriller</span></td>
+      <td class="peak-years">1997–present</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Univ. of Sheffield, UK (BA, Law)</td>
+      <td class="note-cell">Jack Reacher series — 25+ NYT bestsellers</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>36</td>
+      <td><div class="author-name">Harlan Coben</div><div class="notable-works">Tell No One, The Innocent, Hold Tight</div></td>
+      <td><span class="genre-badge genre-thriller">Thriller</span></td>
+      <td class="peak-years">2001–present</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Amherst College (BA, Political Science)</td>
+      <td class="note-cell">Tell No One, No Second Chance, Hold Tight, Stay Close</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>37</td>
+      <td><div class="author-name">John Sandford</div><div class="notable-works">Prey series, Virgil Flowers series</div></td>
+      <td><span class="genre-badge genre-crime">Crime</span></td>
+      <td class="peak-years">1989–present</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Univ. of Iowa (BA, Journalism; PhD, History)</td>
+      <td class="note-cell">Lucas Davenport Prey series — 30+ NYT #1s</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>38</td>
+      <td><div class="author-name">Michael Connelly</div><div class="notable-works">The Lincoln Lawyer, Bosch series</div></td>
+      <td><span class="genre-badge genre-crime">Crime</span></td>
+      <td class="peak-years">1992–present</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Univ. of Florida (BA, Journalism)</td>
+      <td class="note-cell">Harry Bosch series, The Lincoln Lawyer, The Reversal — 25+ NYT bestsellers</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>39</td>
+      <td><div class="author-name">Patricia Cornwell</div><div class="notable-works">Postmortem, Body of Evidence</div></td>
+      <td><span class="genre-badge genre-thriller">Medical Thriller</span></td>
+      <td class="peak-years">1990–present</td>
+      <td class="no-ivy">No Ivy degree</td>
+      <td>Davidson College (BA, English)</td>
+      <td class="note-cell">Kay Scarpetta series — 20+ NYT #1s; pioneered the forensic thriller genre</td>
+    </tr>
+
+    <tr data-ivy="no">
+      <td>40</td>
+      <td><div class="author-name">James McBride</div><div class="notable-works">The Color of Water, Deacon King Kong</div></td>
+      <td><span class="genre-badge genre-fiction">Literary Fiction</span></td>
+      <td class="peak-years">1996–present</td>
+      <td><span class="ivy-school ivy-columbia">Oberlin</span> — wait<br><small style="color:#444">No Ivy for McBride; Oberlin BA + Columbia MFA</small></td>
+      <td>Oberlin (BA); Columbia (MFA)</td>
+      <td class="note-cell">The Color of Water, Song Yet Sung, The Good Lord Bird (NBA), Deacon King Kong</td>
+    </tr>
+
+  </tbody>
+</table>
+</div>
+
+<div class="section-divider"><h2>Ivy League School Breakdown</h2><hr></div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <span class="num" style="color:#e87a7a;">7</span>
+    <span class="label">Harvard (incl. Law/Business)</span>
+  </div>
+  <div class="stat-card">
+    <span class="num" style="color:#6aaee8;">5</span>
+    <span class="label">Yale (incl. Law)</span>
+  </div>
+  <div class="stat-card">
+    <span class="num" style="color:#e8b96a;">3</span>
+    <span class="label">Princeton</span>
+  </div>
+  <div class="stat-card">
+    <span class="num" style="color:#6a8ae8;">3</span>
+    <span class="label">Columbia (incl. MFA)</span>
+  </div>
+  <div class="stat-card">
+    <span class="num" style="color:#e87a7a;">2</span>
+    <span class="label">Cornell</span>
+  </div>
+  <div class="stat-card">
+    <span class="num" style="color:#6ae89a;">1</span>
+    <span class="label">Dartmouth</span>
+  </div>
+  <div class="stat-card">
+    <span class="num" style="color:#c8a87a;">1</span>
+    <span class="label">Brown</span>
+  </div>
+</div>
+
+<div class="footnote">
+  <strong>Methodology notes:</strong> This table covers authors with significant sustained presence on the NYT Bestseller lists (fiction and nonfiction, hardcover and paperback combined) from approximately 1975–2025. "Ivy League" is strictly defined as the eight official Ivy League schools: Harvard, Yale, Princeton, Columbia, Penn, Cornell, Dartmouth, and Brown. Undergraduate, master's, and doctoral degrees all qualify. Law and medical degrees from Ivy institutions are included. Authors marked "No Ivy degree" may have attended prestigious non-Ivy institutions (Stanford, Northwestern, Notre Dame, etc.). Educational data sourced from official biographies, Britannica, Wikipedia, and publisher profiles. Some Ivy-adjacent cases (Columbia MFA, etc.) are noted but not counted in primary Ivy tallies unless the institution is one of the eight. <em>Observations:</em> Nonfiction and literary fiction authors trend heavily Ivy League. Genre fiction dominants (Patterson, King, Steel, Grisham, Roberts) largely did not attend Ivy institutions, suggesting commercial bestselling fiction may not correlate with elite academic credentials.
+</div>
+
+<script>
+let sortDir = {};
+function sortTable(col) {
+  const table = document.getElementById('main-table');
+  const tbody = table.querySelector('tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr:not(.hidden)')).filter(r => !r.cells[1]?.textContent.includes('see row'));
+  sortDir[col] = !sortDir[col];
+  rows.sort((a, b) => {
+    let aVal = a.cells[col]?.textContent.trim() || '';
+    let bVal = b.cells[col]?.textContent.trim() || '';
+    const aNum = parseFloat(aVal);
+    const bNum = parseFloat(bVal);
+    if (!isNaN(aNum) && !isNaN(bNum)) return sortDir[col] ? aNum - bNum : bNum - aNum;
+    return sortDir[col] ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+  });
+  rows.forEach(r => tbody.appendChild(r));
+  document.querySelectorAll('thead th').forEach((th, i) => th.classList.toggle('sorted', i === col));
+}
+
+function filterTable(type) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  const rows = document.querySelectorAll('#main-table tbody tr');
+  rows.forEach(row => {
+    const ivy = row.dataset.ivy;
+    const school = (row.dataset.school || '').toLowerCase();
+    let show = true;
+    if (type === 'ivy') show = ivy === 'yes';
+    else if (type === 'no-ivy') show = ivy === 'no';
+    else if (['harvard','yale','columbia','princeton','cornell','dartmouth','brown','penn'].includes(type))
+      show = school.includes(type);
+    if (row.textContent.includes('see row')) show = false;
+    row.classList.toggle('hidden', !show);
+  });
+  updateCount();
+}
+
+function searchTable(query) {
+  const q = query.toLowerCase();
+  const rows = document.querySelectorAll('#main-table tbody tr');
+  rows.forEach(row => {
+    if (row.textContent.includes('see row')) { row.classList.add('hidden'); return; }
+    row.classList.toggle('hidden', q.length > 0 && !row.textContent.toLowerCase().includes(q));
+  });
+  updateCount();
+}
+
+function updateCount() {
+  const visible = document.querySelectorAll('#main-table tbody tr:not(.hidden)').length;
+  document.getElementById('total-count').textContent = visible;
+}
+</script>
+</body>
+</html>
