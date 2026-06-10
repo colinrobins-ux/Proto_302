@@ -1,0 +1,1 @@
+The goal of this project is to highlight if there are any unfair biases between ivy league authors and non-ivy league authors. this is a project for my work, using AI to pull data to tell an informational story.
