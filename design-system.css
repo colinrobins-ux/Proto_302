@@ -324,8 +324,8 @@ body {
 }
 
 .ds-section-divider h2 {
-  font-size: 0.85rem;
-  color: #666;
+  font-size: 1rem;
+  color: var(--ds-heading);
   font-family: var(--ds-font-sans);
   text-transform: uppercase;
   letter-spacing: 1px;
